@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Spin & Split | Splitora Games</title>
+ <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+ <a href="index.html" class="nav-back">← Back to Home</a>
+
+ <header>
+  <h1> Spin the Wheel</h1>
+  <p style="color: #94a3b8; font-size: 1.1rem;">Decide who pays the bill with RNG Chaos!</p>
+ </header>
+
+ <div class="game-container">
+  <div class="input-section">
+   <div class="input-group">
+    <label>Bill Amount (₹)</label>
+    <input type="number" id="bill-amount" placeholder="Enter total bill e.g. 1500">
+   </div>
+   <div class="input-group">
+    <label>Participants (comma separated)</label>
+    <input type="text" id="participants" value="Garette, Hannah, Logan, Ellie, Dean, You">
+   </div>
+  </div>
+
+  <div class="wheel-wrapper">
+   <div class="wheel-pointer"></div>
+   <canvas id="wheel-canvas" width="800" height="800"></canvas>
+   <button class="spin-button" id="spin-btn">SPIN</button>
+  </div>
+
+  <div class="status-card" id="status-msg">READY TO ROLL</div>
+ </div>
+
+ <div class="loser-modal" id="loser-modal">
+  <div class="loser-content">
+   <div class="loser-emoji">💸</div>
+   <p style="text-transform: uppercase; letter-spacing: 2px; font-weight: 800; color: #94a3b8;">The Loser is</p>
+   <h2 class="loser-name" id="loser-name">TANISHA</h2>
+   <p id="bill-detail" style="font-size: 1.2rem; font-weight: 600;">Owes ₹1,500.00</p>
+   <a href="#" class="btn-upi" id="upi-link">Pay via UPI Now</a>
+   <button onclick="resetGame()" style="display: block; margin: 1.5rem auto 0; background: none; border: none; color: #94a3b8; cursor: pointer; text-decoration: underline;">Spin Again</button>
+  </div>
+ </div>
+
+ <script>
+  const canvas = document.getElementById('wheel-canvas');
+  const ctx = canvas.getContext('2d');
+  const spinBtn = document.getElementById('spin-btn');
+  const statusMsg = document.getElementById('status-msg');
+  const loserModal = document.getElementById('loser-modal');
+  const loserNameEl = document.getElementById('loser-name');
+  const billDetailEl = document.getElementById('bill-detail');
+  
+  let members = [];
+  let currentRotation = 0;
+  let isSpinning = false;
+
+  function initWheel() {
+   const input = document.getElementById('participants').value;
+   members = input.split(',').map(m => m.trim()).filter(m => m !== "");
+   drawWheel();
+  }
+
+  function drawWheel() {
+   const centerX = canvas.width / 2;
+   const centerY = canvas.height / 2;
+   const radius = canvas.width / 2 - 20;
+   const sliceAngle = (2 * Math.PI) / members.length;
+
+   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+   members.forEach((name, i) => {
+    const angle = i * sliceAngle;
+    
+    // Slice
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
+    ctx.fillStyle = i % 2 === 0 ? '#00d9ff' : '#7c3aed';
+    ctx.fill();
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Text label
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle + sliceAngle / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "white";
+    ctx.font = "bold 34px sans-serif";
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(name, radius - 40, 12);
+    ctx.restore();
+   });
+  }
+
+  spinBtn.addEventListener('click', () => {
+   if (isSpinning) return;
+   
+   const amount = document.getElementById('bill-amount').value || 0;
+   if (members.length < 2) {
+    alert("Add at least 2 participants!");
+    return;
+   }
+
+   isSpinning = true;
+   spinBtn.disabled = true;
+   statusMsg.innerText = "THE UNIVERSE IS DECIDING...";
+
+   const spins = 8 + Math.random() * 5; 
+   const degrees = spins * 360 + Math.random() * 360;
+   currentRotation += degrees;
+
+   canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+   setTimeout(() => {
+    isSpinning = false;
+    spinBtn.disabled = false;
+    
+    // Calculate winner
+    const actualRotation = currentRotation % 360;
+    const sliceWidth = 360 / members.length;
+    // Pointer is at -90deg (top). Wheel rotates clockwise.
+    // winnerIndex = floor((360 - offset + 270) % 360 / sliceWidth)
+    const winnerIndex = Math.floor(((360 - (actualRotation % 360) + 270) % 360) / sliceWidth);
+    const winner = members[winnerIndex];
+
+    showLoser(winner, amount);
+   }, 5000);
+  });
+
+  function showLoser(name, amount) {
+   loserNameEl.innerText = name.toUpperCase();
+   billDetailEl.innerText = `Owes ₹${parseFloat(amount).toLocaleString()}`;
+   statusMsg.innerText = "WE HAVE A LOSER!";
+   loserModal.style.display = 'flex';
+  }
+
+  function resetGame() {
+   loserModal.style.display = 'none';
+   statusMsg.innerText = "READY TO ROLL";
+   initWheel();
+  }
+
+  document.getElementById('participants').addEventListener('change', initWheel);
+  
+  // Initial draw
+  initWheel();
+ </script>
+</body>
+</html>
