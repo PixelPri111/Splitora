@@ -40,17 +40,17 @@
     <div class="stat-card">
      <span class="stat-label">Net Balance</span>
      <span class="stat-value positive" id="net-balance">+ ₹1,560</span>
-     <p style="font-size: 0.75rem; color: var(--success); font-weight: 600;">You are owed from 'Goa Trip' group</p>
+     <p id="net-balance-summary" style="font-size: 0.75rem; font-weight: 600;"></p>
     </div>
     <div class="stat-card">
      <span class="stat-label">Total Spent (This Month)</span>
      <span class="stat-value" id="total-spent">₹8,420</span>
-     <p style="font-size: 0.75rem; color: var(--danger); font-weight: 600;">↑ 12% from last month</p>
+     <p id="total-spent-summary" style="font-size: 0.75rem; font-weight: 600;"></p>
     </div>
     <div class="stat-card">
      <span class="stat-label">Planned Budget</span>
      <span class="stat-value">₹15,000</span>
-     <p style="font-size: 0.75rem; color: #64748b; font-weight: 600;"><span id="budget-remaining">₹6,580</span> remaining</p>
+     <p id="budget-summary" style="font-size: 0.75rem; font-weight: 600;"></p>
     </div>
    </div>
 
@@ -202,13 +202,47 @@
     }
    });
 
+   // Update Total Spent
    document.getElementById('total-spent').innerText = `₹${totalSpent.toLocaleString()}`;
+   const totalSpentSummary = document.getElementById('total-spent-summary');
+   if (totalSpent > (PLANNED_BUDGET * 0.8)) {
+    totalSpentSummary.innerText = "⚠️ High spending! You've used over 80% of your budget.";
+    totalSpentSummary.style.color = "var(--danger)";
+   } else if (totalSpent > (PLANNED_BUDGET * 0.5)) {
+    totalSpentSummary.innerText = "You're halfway through your monthly budget.";
+    totalSpentSummary.style.color = "#d97706";
+   } else {
+    totalSpentSummary.innerText = "Keep it up! Your spending is well within limits.";
+    totalSpentSummary.style.color = "var(--success)";
+   }
+
+   // Update Net Balance
    const netBalanceEl = document.getElementById('net-balance');
+   const netBalanceSummary = document.getElementById('net-balance-summary');
    netBalanceEl.innerText = `${netBalance >= 0 ? '+' : '-'} ₹${Math.abs(netBalance).toLocaleString()}`;
    netBalanceEl.className = `stat-value ${netBalance >= 0 ? 'positive' : 'negative'}`;
    
+   if (netBalance > 0) {
+    netBalanceSummary.innerText = "Excellent! You are currently owed money.";
+    netBalanceSummary.style.color = "var(--success)";
+   } else if (netBalance < 0) {
+    netBalanceSummary.innerText = "Note: You have outstanding settlements to make.";
+    netBalanceSummary.style.color = "var(--danger)";
+   } else {
+    netBalanceSummary.innerText = "All settled up. Your balance is zero.";
+    netBalanceSummary.style.color = "#64748b";
+   }
+   
+   // Update Budget
    const remaining = PLANNED_BUDGET - totalSpent;
-   document.getElementById('budget-remaining').innerText = `₹${remaining.toLocaleString()}`;
+   const budgetSummary = document.getElementById('budget-summary');
+   if (remaining >= 0) {
+    budgetSummary.innerHTML = `<span id="budget-remaining">₹${remaining.toLocaleString()}</span> remaining for this month`;
+    budgetSummary.style.color = "#64748b";
+   } else {
+    budgetSummary.innerHTML = `<span id="budget-remaining" style="color: var(--danger)">₹${Math.abs(remaining).toLocaleString()}</span> over budget!`;
+    budgetSummary.style.color = "var(--danger)";
+   }
   }
 
   function renderExpenses() {
