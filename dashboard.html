@@ -246,27 +246,42 @@
   }
 
   function renderExpenses() {
-   const mainTable = document.querySelector('.expense-table');
-   const tableBody = mainTable.querySelector('tbody');
-   tableBody.innerHTML = '';
-   
-   expenses.forEach(exp => {
-    const row = tableBody.insertRow();
-    row.innerHTML = `
-     <td>${exp.desc}</td>
-     <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
-     <td>${exp.date}</td>
-     <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
-    `;
-   });
-   
-   // Sync with full transactions view if visible
-   const fullContainer = document.getElementById('full-transactions-container');
-   if (fullContainer) {
-    fullContainer.innerHTML = mainTable.outerHTML;
-   }
+    const dashboardTable = document.querySelector('#section-dashboard .expense-table');
+    const dashboardBody = dashboardTable.querySelector('tbody');
+    dashboardBody.innerHTML = '';
+    
+    // Top 4 for Dashboard Home
+    expenses.slice(0, 4).forEach(exp => {
+      const row = dashboardBody.insertRow();
+      row.innerHTML = `
+        <td>${exp.desc}</td>
+        <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
+        <td>${exp.date}</td>
+        <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+      `;
+    });
 
-   updateStats();
+    // Full List for Transactions Tab
+    const fullContainer = document.getElementById('full-transactions-container');
+    if (fullContainer) {
+      const fullTable = dashboardTable.cloneNode(true);
+      const fullBody = fullTable.querySelector('tbody');
+      fullBody.innerHTML = '';
+      
+      expenses.forEach(exp => {
+        const row = fullBody.insertRow();
+        row.innerHTML = `
+          <td>${exp.desc}</td>
+          <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
+          <td>${exp.date}</td>
+          <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+        `;
+      });
+      fullContainer.innerHTML = '';
+      fullContainer.appendChild(fullTable);
+    }
+
+    updateStats();
   }
 
   function showSection(sectionId, menuElement) {
@@ -277,10 +292,9 @@
    const target = document.getElementById(`section-${sectionId}`);
    if (target) {
      target.style.display = 'block';
-     if (sectionId === 'transactions') {
-       // Force sync table
-       document.getElementById('full-transactions-container').innerHTML = document.querySelector('.expense-table').outerHTML;
-     }
+      if (sectionId === 'transactions') {
+        // Full list is already synced by renderExpenses
+      }
    }
 
    // Update page title
