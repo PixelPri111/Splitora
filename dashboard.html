@@ -28,7 +28,7 @@
  <main class="main-content">
   <header>
    <div>
-    <h1 id="page-title">Welcome back, Priyasha! 👋</h1>
+    <h1 id="page-title">Welcome back! 👋</h1>
     <p style="color: #64748b; margin-top: 0.25rem;">Here's your finance overview for today.</p>
    </div>
    <button class="btn-add" onclick="openModal()">+ Add Expense</button>
@@ -290,16 +290,21 @@
    
    // Show target section
    const target = document.getElementById(`section-${sectionId}`);
+   const userName = localStorage.getItem('splitora_user') || 'Priyasha';
    if (target) {
      target.style.display = 'block';
       if (sectionId === 'transactions') {
         // Full list is already synced by renderExpenses
       }
+      if (sectionId === 'settings') {
+        const nameInput = target.querySelector('input[type="text"]');
+        if (nameInput) nameInput.value = userName;
+      }
    }
 
    // Update page title
-   const titles = {
-     'dashboard': 'Welcome back, Priyasha! 👋',
+    const titles = {
+      'dashboard': `Welcome back, ${userName}! 👋`,
      'analytics': 'Financial Analytics 📊',
      'groups': 'My Split Groups 👥',
      'transactions': 'Transaction History 💸',
@@ -350,6 +355,7 @@
 
   // Initial render
   renderExpenses();
+  showSection('dashboard');
  </script>
 </body>
 
