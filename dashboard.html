@@ -8,6 +8,7 @@
  <script src="upi.js"></script>
  <script src="shared.js"></script>
  <link rel="stylesheet" href="css/dashboard.css">
+ <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -79,14 +80,8 @@
   <div id="section-analytics" class="content-section" style="display: none;">
    <div class="section-card">
     <h3 style="margin-bottom: 1.5rem;">Spending Trends</h3>
-    <div style="height: 300px; display: flex; align-items: flex-end; gap: 1rem; padding-top: 2rem;">
-     <div style="flex: 1; background: var(--primary); height: 40%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Mon</span></div>
-     <div style="flex: 1; background: var(--secondary); height: 70%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Tue</span></div>
-     <div style="flex: 1; background: var(--primary); height: 55%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Wed</span></div>
-     <div style="flex: 1; background: var(--secondary); height: 85%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Thu</span></div>
-     <div style="flex: 1; background: var(--primary); height: 30%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Fri</span></div>
-     <div style="flex: 1; background: var(--secondary); height: 90%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Sat</span></div>
-     <div style="flex: 1; background: var(--primary); height: 65%; border-radius: 8px 8px 0 0; position: relative;"><span style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.75rem;">Sun</span></div>
+    <div style="height: 350px; width: 100%; position: relative;">
+     <canvas id="analyticsChart"></canvas>
     </div>
    </div>
   </div>
@@ -188,6 +183,68 @@
 
   let expenses = JSON.parse(localStorage.getItem('splitora_expenses')) || defaultExpenses;
   const PLANNED_BUDGET = 15000;
+  let myChart = null;
+
+  function updateAnalytics() {
+    const ctx = document.getElementById('analyticsChart');
+    if (!ctx) return;
+
+    // Group only negative expenses (spending) by category
+    const categoryTotals = {};
+    expenses.filter(exp => exp.type === 'negative').forEach(exp => {
+      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + parseFloat(exp.amount);
+    });
+
+    const labels = Object.keys(categoryTotals);
+    const data = Object.values(categoryTotals);
+
+    if (myChart) {
+      myChart.destroy();
+    }
+
+    myChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Spending by Category',
+          data: data,
+          backgroundColor: [
+            '#00d9ff', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#6366f1'
+          ],
+          borderWidth: 0,
+          hoverOffset: 20
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              usePointStyle: true,
+              padding: 20,
+              font: { weight: '600', family: "'Segoe UI', sans-serif" },
+              color: '#475569'
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 12,
+            titleFont: { size: 14, weight: '700' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                return ` ₹${context.raw.toLocaleString()}`;
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
 
   function updateStats() {
    let totalSpent = 0;
@@ -282,6 +339,7 @@
     }
 
     updateStats();
+    updateAnalytics();
   }
 
   function showSection(sectionId, menuElement) {
@@ -292,7 +350,7 @@
    const target = document.getElementById(`section-${sectionId}`);
    const userName = localStorage.getItem('splitora_user') || 'Priyasha';
    if (target) {
-     target.style.display = 'block';
+           target.style.display = 'block'; if (sectionId === 'analytics') updateAnalytics();
       if (sectionId === 'transactions') {
         // Full list is already synced by renderExpenses
       }
