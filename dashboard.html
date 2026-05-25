@@ -66,7 +66,7 @@
        <th>DESCRIPTION</th>
        <th>CATEGORY</th>
        <th>DATE</th>
-       <th>AMOUNT</th>
+       <th>AMOUNT</th><th>ACTION</th>
       </tr>
      </thead>
      <tbody>
@@ -308,13 +308,14 @@
     dashboardBody.innerHTML = '';
     
     // Top 4 for Dashboard Home
-    expenses.slice(0, 4).forEach(exp => {
+    expenses.slice(0, 4).forEach((exp, index) => {
       const row = dashboardBody.insertRow();
       row.innerHTML = `
         <td>${exp.desc}</td>
         <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
         <td>${exp.date}</td>
         <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+        <td><button class="btn-delete" onclick="deleteExpense(${index})" title="Delete Transaction">×</button></td>
       `;
     });
 
@@ -325,13 +326,14 @@
       const fullBody = fullTable.querySelector('tbody');
       fullBody.innerHTML = '';
       
-      expenses.forEach(exp => {
+      expenses.forEach((exp, index) => {
         const row = fullBody.insertRow();
         row.innerHTML = `
           <td>${exp.desc}</td>
           <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
           <td>${exp.date}</td>
           <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+          <td><button class="btn-delete" onclick="deleteExpense(${index})" title="Delete Transaction">×</button></td>
         `;
       });
       fullContainer.innerHTML = '';
@@ -340,6 +342,14 @@
 
     updateStats();
     updateAnalytics();
+  }
+
+  function deleteExpense(index) {
+    if (confirm('Permanently delete this transaction?')) {
+      expenses.splice(index, 1);
+      localStorage.setItem('splitora_expenses', JSON.stringify(expenses));
+      renderExpenses();
+    }
   }
 
   function showSection(sectionId, menuElement) {
