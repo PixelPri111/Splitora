@@ -22,7 +22,7 @@
    <a href="#" class="menu-item" onclick="showSection('settings', this)">⚙️ Settings</a>
   </nav>
   <div class="logout">
-   <a href="index.html" class="btn-logout">🚪 Logout</a>
+   <a href="#" class="btn-logout" onclick="logout()">🚪 Logout</a>
   </div>
  </aside>
 
@@ -119,8 +119,8 @@
    <div class="section-card" style="max-width: 600px;">
     <h3 style="margin-bottom: 1.5rem;">Account Settings</h3>
     <div class="form-group">
-     <label>Profile Name</label>
-     <input type="text" value="Priyasha Goyal">
+     <label for="settings-profile-name">Profile Name</label>
+     <input type="text" id="settings-profile-name" value="Priyasha Goyal">
     </div>
     <div class="form-group">
      <label>Preferred Currency</label>
@@ -135,7 +135,7 @@
       <input type="checkbox" checked style="width: auto;"> <span style="font-size: 0.9rem;">Email Alerts</span>
      </div>
     </div>
-    <button class="btn-save" style="margin-top: 1rem; width: 200px;">Save Changes</button>
+    <button class="btn-save" onclick="saveSettings()" style="margin-top: 1rem; width: 200px;">Save Changes</button>
    </div>
   </div>
  </main>
@@ -154,7 +154,7 @@
     </div>
     <div class="form-group">
      <label for="amount">Amount (₹)</label>
-     <input type="number" id="amount" placeholder="0.00" required>
+     <input type="text" id="amount" placeholder="0.00" required>
     </div>
     <div class="form-group">
      <label for="category">Category</label>
@@ -174,14 +174,41 @@
  </div>
 
  <script>
-  // Initial data if none exists
-  const defaultExpenses = [
-   { desc: 'Starbucks Coffee', category: 'Food', date: 'Today, 10:45 AM', amount: 350, type: 'negative' },
-   { desc: 'Uber Ride', category: 'Travel', date: 'Yesterday', amount: 120, type: 'positive' },
-   { desc: 'Monthly Maintenance', category: 'Rent', date: 'Oct 15, 2025', amount: 4500, type: 'negative' }
-  ];
+  // Authentication Guard
+  if (localStorage.getItem('splitora_logged_in') !== 'true') {
+   window.location.href = 'form.html';
+  }
 
-  let expenses = JSON.parse(localStorage.getItem('splitora_expenses')) || defaultExpenses;
+  // User Session Management
+  const currentUser = localStorage.getItem('splitora_user') || 'Guest';
+  const userExpensesKey = `splitora_expenses_${currentUser}`;
+
+  function getSeedData(name) {
+    const n = name.toLowerCase();
+    if (n.includes('priyasha')) {
+      return [
+        { desc: 'Netflix Subscription', category: 'Entertainment', date: 'Oct 1, 2025', amount: 499, type: 'negative' },
+        { desc: 'Starbucks Coffee', category: 'Food', date: 'Today', amount: 350, type: 'negative' },
+        { desc: 'Concert Tickets', category: 'Entertainment', date: 'Last Week', amount: 2500, type: 'negative' }
+      ];
+    } else if (n.includes('aarav')) {
+      return [
+        { desc: 'Apartment Maintenance', category: 'Rent', date: 'Oct 1, 2025', amount: 8500, type: 'negative' },
+        { desc: 'Weekend Getaway Fuel', category: 'Travel', date: 'Yesterday', amount: 1500, type: 'negative' },
+        { desc: 'Flight Tickets', category: 'Travel', date: 'Last Month', amount: 12000, type: 'negative' }
+      ];
+    }
+    return [
+      { desc: 'Welcome to Splitora! Logged your first split', category: 'Food', date: 'Today', amount: 0, type: 'positive' }
+    ];
+  }
+
+  // Auto-seed for new users
+  if (!localStorage.getItem(userExpensesKey)) {
+    localStorage.setItem(userExpensesKey, JSON.stringify(getSeedData(currentUser)));
+  }
+
+  let expenses = JSON.parse(localStorage.getItem(userExpensesKey)) || [];
   const PLANNED_BUDGET = 15000;
   let myChart = null;
 
@@ -192,7 +219,7 @@
     // Group only negative expenses (spending) by category
     const categoryTotals = {};
     expenses.filter(exp => exp.type === 'negative').forEach(exp => {
-      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + parseFloat(exp.amount);
+      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + sanitizeCurrency(exp.amount);
     });
 
     const labels = Object.keys(categoryTotals);
@@ -250,14 +277,15 @@
    let totalSpent = 0;
    let netBalance = 0;
 
-   expenses.forEach(exp => {
-    if (exp.type === 'negative') {
-     totalSpent += parseFloat(exp.amount);
-     netBalance -= parseFloat(exp.amount);
-    } else {
-     netBalance += parseFloat(exp.amount);
-    }
-   });
+    expenses.forEach(exp => {
+     const amt = sanitizeCurrency(exp.amount);
+     if (exp.type === 'negative') {
+      totalSpent += amt;
+      netBalance -= amt;
+     } else {
+      netBalance += amt;
+     }
+    });
 
    // Update Total Spent
    document.getElementById('total-spent').innerText = `₹${totalSpent.toLocaleString()}`;
@@ -304,6 +332,7 @@
 
   function renderExpenses() {
     const dashboardTable = document.querySelector('#section-dashboard .expense-table');
+    if (!dashboardTable) return;
     const dashboardBody = dashboardTable.querySelector('tbody');
     dashboardBody.innerHTML = '';
     
@@ -314,7 +343,7 @@
         <td>${exp.desc}</td>
         <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
         <td>${exp.date}</td>
-        <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+        <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${sanitizeCurrency(exp.amount).toLocaleString()}</td>
         <td><button class="btn-delete" onclick="deleteExpense(${index})" title="Delete Transaction">×</button></td>
       `;
     });
@@ -332,7 +361,7 @@
           <td>${exp.desc}</td>
           <td><span class="badge badge-${exp.category.toLowerCase()}">${exp.category}</span></td>
           <td>${exp.date}</td>
-          <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${parseFloat(exp.amount).toLocaleString()}</td>
+          <td class="${exp.type}">${exp.type === 'negative' ? '-' : '+'} ₹${sanitizeCurrency(exp.amount).toLocaleString()}</td>
           <td><button class="btn-delete" onclick="deleteExpense(${index})" title="Delete Transaction">×</button></td>
         `;
       });
@@ -347,50 +376,94 @@
   function deleteExpense(index) {
     if (confirm('Permanently delete this transaction?')) {
       expenses.splice(index, 1);
-      localStorage.setItem('splitora_expenses', JSON.stringify(expenses));
+      localStorage.setItem(userExpensesKey, JSON.stringify(expenses));
       renderExpenses();
     }
   }
 
   function showSection(sectionId, menuElement) {
-   // Hide all sections
-   document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
-   
-   // Show target section
-   const target = document.getElementById(`section-${sectionId}`);
-   const userName = localStorage.getItem('splitora_user') || 'Priyasha';
-   if (target) {
-           target.style.display = 'block'; if (sectionId === 'analytics') updateAnalytics();
-      if (sectionId === 'transactions') {
-        // Full list is already synced by renderExpenses
-      }
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+    
+    // Show target section
+    const target = document.getElementById(`section-${sectionId}`);
+    const userName = localStorage.getItem('splitora_user') || 'Guest';
+    
+    if (target) {
+      target.style.display = 'block';
+      if (sectionId === 'analytics') updateAnalytics();
       if (sectionId === 'settings') {
         const nameInput = target.querySelector('input[type="text"]');
         if (nameInput) nameInput.value = userName;
       }
-   }
+    }
 
-   // Update page title
+    // Update page title
     const titles = {
       'dashboard': `Welcome back, ${userName}! 👋`,
-     'analytics': 'Financial Analytics 📊',
-     'groups': 'My Split Groups 👥',
-     'transactions': 'Transaction History 💸',
-     'settings': 'Account Settings ⚙️'
-   };
-   document.getElementById('page-title').innerText = titles[sectionId] || 'Dashboard';
+      'analytics': 'Financial Analytics 📊',
+      'groups': 'My Split Groups 👥',
+      'transactions': 'Transaction History 💸',
+      'settings': 'Account Settings ⚙️'
+    };
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.innerText = titles[sectionId] || 'Dashboard';
 
-   // Update active menu item
-   if (menuElement) {
-     document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-     menuElement.classList.add('active');
-   } else {
-     // Find and highlight correct menu item by text if no element provided (e.g., from "View All" link)
-     document.querySelectorAll('.menu-item').forEach(i => {
-       if (i.innerText.toLowerCase().includes(sectionId)) i.classList.add('active');
-       else i.classList.remove('active');
-     });
-   }
+    // Update active menu item
+    if (menuElement) {
+      document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+      menuElement.classList.add('active');
+    } else {
+      document.querySelectorAll('.menu-item').forEach(i => {
+        if (i.innerText.toLowerCase().includes(sectionId)) i.classList.add('active');
+        else i.classList.remove('active');
+      });
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('splitora_logged_in');
+    localStorage.removeItem('splitora_user');
+    window.location.href = 'index.html';
+  }
+
+  function saveSettings() {
+    const nameInput = document.getElementById('settings-profile-name');
+    if (!nameInput) return;
+    
+    const newName = nameInput.value.trim();
+    if (!newName) {
+      alert('Profile Name cannot be empty.');
+      nameInput.value = localStorage.getItem('splitora_user') || 'Guest';
+      return;
+    }
+    
+    localStorage.setItem('splitora_user', newName);
+    alert('Settings saved successfully!');
+    
+    // Refresh page titles and display
+    const userName = localStorage.getItem('splitora_user') || 'Guest';
+    const activeMenuItem = document.querySelector('.menu-item.active');
+    
+    const titles = {
+      'dashboard': `Welcome back, ${userName}! 👋`,
+      'analytics': 'Financial Analytics 📊',
+      'groups': 'My Split Groups 👥',
+      'transactions': 'Transaction History 💸',
+      'settings': 'Account Settings ⚙️'
+    };
+    
+    const titleEl = document.getElementById('page-title');
+    if (titleEl && activeMenuItem) {
+      const sectionText = activeMenuItem.innerText.toLowerCase();
+      let activeSectionId = 'dashboard';
+      if (sectionText.includes('analytics')) activeSectionId = 'analytics';
+      else if (sectionText.includes('groups')) activeSectionId = 'groups';
+      else if (sectionText.includes('transactions')) activeSectionId = 'transactions';
+      else if (sectionText.includes('settings')) activeSectionId = 'settings';
+      
+      titleEl.innerText = titles[activeSectionId] || 'Dashboard';
+    }
   }
 
   function openModal() {
@@ -403,9 +476,21 @@
 
   document.getElementById('expense-form').onsubmit = function(e) {
    e.preventDefault();
-   const desc = document.getElementById('desc').value;
-   const amount = document.getElementById('amount').value;
+   const descInput = document.getElementById('desc').value;
+   const amountInput = document.getElementById('amount').value;
    const category = document.getElementById('category').value;
+   
+   const desc = descInput.trim();
+   const amount = sanitizeCurrency(amountInput);
+   
+   if (!desc) {
+    alert('Please enter a valid description.');
+    return;
+   }
+   if (amount <= 0) {
+    alert('Please enter a valid expense amount greater than 0.');
+    return;
+   }
    
    expenses.unshift({
     desc,
@@ -415,7 +500,7 @@
     type: 'negative'
    });
 
-   localStorage.setItem('splitora_expenses', JSON.stringify(expenses));
+   localStorage.setItem(userExpensesKey, JSON.stringify(expenses));
    renderExpenses();
    closeModal();
    this.reset();

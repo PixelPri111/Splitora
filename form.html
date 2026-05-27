@@ -40,8 +40,18 @@
   </div>
  </div>
 
+ <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
  <script>
+  (function() {
+   emailjs.init("YOUR_PUBLIC_KEY"); // Replace with your real EmailJS Public Key
+  })();
+
   let isLogin = false;
+
+  function validateEmail(email) {
+   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+   return re.test(email);
+  }
 
   function toggleAuth() {
    isLogin = !isLogin;
@@ -71,12 +81,68 @@
 
   function handleAuth(event) {
    event.preventDefault();
-   const nameInput = document.getElementById('name');
-   const userEmail = document.getElementById('email').value;
-   const userName = isLogin ? (userEmail.split('@')[0]) : (nameInput.value || 'Priyasha');
-   
-   localStorage.setItem('splitora_user', userName);
-   window.location.href = 'dashboard.html';
+   const email = document.getElementById('email').value.trim();
+   const password = document.getElementById('password').value;
+
+   if (!email) {
+    alert('Please enter your email address.');
+    return;
+   }
+   if (!validateEmail(email)) {
+    alert('Please enter a valid email address.');
+    return;
+   }
+   if (!password || password.trim() === '') {
+    alert('Password cannot be empty or only spaces.');
+    return;
+   }
+
+   const users = JSON.parse(localStorage.getItem('splitora_registered_users')) || [];
+
+   if (isLogin) {
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+     localStorage.setItem('splitora_user', user.name);
+     localStorage.setItem('splitora_logged_in', 'true');
+     
+     // EmailJS Notification
+     emailjs.send("service_default", "template_welcome", {
+      to_name: user.name,
+      to_email: email,
+      message: "You have successfully logged into your Splitora Dashboard!"
+     });
+
+     window.location.href = 'dashboard.html';
+    } else {
+     alert('Invalid email or password. Please try again.');
+    }
+   } else {
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+     alert('Please enter your full name.');
+     return;
+    }
+
+    const existingUser = users.find(u => u.email === email);
+    if (existingUser) {
+     alert('An account with this email already exists.');
+    } else {
+     const newUser = { name, email, password };
+     users.push(newUser);
+     localStorage.setItem('splitora_registered_users', JSON.stringify(users));
+     localStorage.setItem('splitora_user', name);
+     localStorage.setItem('splitora_logged_in', 'true');
+
+     // EmailJS Notification
+     emailjs.send("service_default", "template_welcome", {
+      to_name: name,
+      to_email: email,
+      message: "Welcome to Splitora! You have successfully created an account."
+     });
+
+     window.location.href = 'dashboard.html';
+    }
+   }
   }
  </script>
 </body>

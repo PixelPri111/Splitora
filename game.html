@@ -4,6 +4,7 @@
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>Spin & Split | Splitora Games</title>
+ <script src="shared.js"></script>
  <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
@@ -18,7 +19,7 @@
   <div class="input-section">
    <div class="input-group">
     <label>Bill Amount (₹)</label>
-    <input type="number" id="bill-amount" placeholder="Enter total bill e.g. 1500">
+    <input type="text" id="bill-amount" placeholder="Enter total bill e.g. 1500">
    </div>
    <div class="input-group">
     <label>Participants (comma separated)</label>
@@ -61,7 +62,20 @@
 
   function initWheel() {
    const input = document.getElementById('participants').value;
-   members = input.split(',').map(m => m.trim()).filter(m => m !== "");
+   const parsedMembers = input.split(',').map(m => m.trim()).filter(m => m !== "");
+   
+   // Safely deduplicate names gracefully without breaking UI rendering
+   const seen = {};
+   members = parsedMembers.map(name => {
+    if (!seen[name]) {
+     seen[name] = 1;
+     return name;
+    } else {
+     seen[name]++;
+     return `${name} (${seen[name]})`;
+    }
+   });
+   
    drawWheel();
   }
 
@@ -103,7 +117,14 @@
   spinBtn.addEventListener('click', () => {
    if (isSpinning) return;
    
-   const amount = document.getElementById('bill-amount').value || 0;
+   const amountInput = document.getElementById('bill-amount').value;
+   const amount = sanitizeCurrency(amountInput);
+   
+   if (amount <= 0) {
+    alert("Please enter a valid bill amount greater than 0!");
+    return;
+   }
+   
    if (members.length < 2) {
     alert("Add at least 2 participants!");
     return;
